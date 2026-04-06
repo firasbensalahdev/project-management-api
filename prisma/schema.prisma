@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String?
+  name      String
+  avatarUrl String?
+  googleId  String?   @unique
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  ownedWorkspaces Workspace[]
+  memberships     WorkspaceMember[]
+  assignedTasks   Task[]          @relation("AssignedTo")
+  createdTasks    Task[]          @relation("CreatedBy")
+  comments        Comment[]
+  refreshTokens   RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Workspace {
+  id        Int       @id @default(autoincrement())
+  name      String
+  ownerId   Int
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members   WorkspaceMember[]
+  projects  Project[]
+}
+
+model WorkspaceMember {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  userId      Int
+  role        String    @default("member")
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId, userId])
+}
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([workspaceId])
+}
+
+model Task {
+  id            Int       @id @default(autoincrement())
+  projectId     Int
+  title         String
+  description   String?
+  status        String    @default("todo")
+  assignedToId  Int?
+  createdById   Int
+  attachmentUrl String?
+  createdAt     DateTime  @default(now())
+  deletedAt     DateTime?
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo    User?     @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy     User      @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  comments      Comment[]
+
+  @@index([projectId])
+  @@index([assignedToId])
+}
+
+model Comment {
+  id        Int       @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  content   String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model IdempotencyKey {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  userId    Int
+  result    Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([key])
+  @@index([expiresAt])
+}
