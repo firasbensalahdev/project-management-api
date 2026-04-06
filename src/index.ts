@@ -5,6 +5,7 @@ import { env } from "./config/env";
 import { logger } from "./utils/logger";
 import { errorHandler } from "./middleware/error.middleware";
 import { prisma } from "./config/prisma";
+import { connectMongo } from "./config/mongoose";
 
 const app = express();
 
@@ -34,6 +35,8 @@ const start = async () => {
   try {
     await prisma.$connect();
     logger.info("PostgreSQL connected");
+
+    await connectMongo();
 
     app.listen(env.PORT, () => {
       logger.info(`Server running on http://localhost:${env.PORT}`);
