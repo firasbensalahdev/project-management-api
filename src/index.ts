@@ -7,6 +7,9 @@ import { errorHandler } from "./middleware/error.middleware";
 import { prisma } from "./config/prisma";
 import { connectMongo } from "./config/mongoose";
 import { redis } from "./config/redis";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger";
+import healthRoutes from "./routes/v1/health.routes";
 
 const app = express();
 
@@ -19,16 +22,21 @@ app.use(
   }),
 );
 
+// swagger docs
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// health check
-app.get("/api/v1/health", (req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-  });
-});
+app.use("/api/v1", healthRoutes);
 
 app.use(errorHandler);
 
