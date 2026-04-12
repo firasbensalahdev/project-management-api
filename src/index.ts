@@ -10,6 +10,8 @@ import { redis } from "./config/redis";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 import healthRoutes from "./routes/v1/health.routes";
+import { passport } from "./config/passport";
+import authRoutes from "./routes/v1/auth.routes";
 
 const app = express();
 
@@ -21,6 +23,8 @@ app.use(
     credentials: true,
   }),
 );
+
+app.use(passport.initialize());
 
 // swagger docs
 app.use(
@@ -37,6 +41,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1", healthRoutes);
+app.use("/api/v1/auth", authRoutes);
 
 app.use(errorHandler);
 
