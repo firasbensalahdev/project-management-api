@@ -12,6 +12,7 @@ import { swaggerSpec } from "./config/swagger";
 import healthRoutes from "./routes/v1/health.routes";
 import { passport } from "./config/passport";
 import authRoutes from "./routes/v1/auth.routes";
+import userRoutes from "./routes/v1/user.routes";
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
 
 app.use(errorHandler);
 
