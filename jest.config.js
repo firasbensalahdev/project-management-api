@@ -12,4 +12,12 @@ module.exports = {
       statements: 80,
     },
   },
+  transform: {
+    "^.+\\.tsx?$": ["ts-jest", {}],
+    "^.+\\.jsx?$": ["babel-jest", {}],
+  },
+  transformIgnorePatterns: ["/node_modules/(?!(uuid)/).*"],
+  moduleNameMapper: {
+    "^uuid$": require.resolve("uuid"),
+  },
 };
