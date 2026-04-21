@@ -16,6 +16,7 @@ import userRoutes from "./routes/v1/user.routes";
 import workspaceRoutes from "./routes/v1/workspace.routes";
 import projectRoutes from "./routes/v1/project.routes";
 import taskRoutes from "./routes/v1/task.routes";
+import commentRoutes from "./routes/v1/comment.routes";
 
 const app = express();
 
@@ -52,6 +53,8 @@ app.use("/api/v1/workspaces/:workspaceId/projects", projectRoutes);
 app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/projects/:projectId/tasks", taskRoutes);
 app.use("/api/v1/tasks", taskRoutes);
+app.use("/api/v1/tasks/:taskId/comments", commentRoutes);
+app.use("/api/v1/comments", commentRoutes);
 
 app.use(errorHandler);
 
