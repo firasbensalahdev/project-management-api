@@ -12,6 +12,7 @@ import {
 import { authMiddleware } from "../../middleware/auth.middleware";
 import { requirePermission } from "../../middleware/workspace.middleware";
 import { uploadMiddleware } from "../../middleware/upload.middleware";
+import { idempotencyMiddleware } from "../../middleware/idempotency.middleware";
 
 const router = Router({ mergeParams: true });
 
@@ -98,7 +99,7 @@ router.get("/", authMiddleware, getTasks);
  *                 data:
  *                   $ref: '#/components/schemas/Task'
  */
-router.post("/", authMiddleware, createTask);
+router.post("/", authMiddleware, idempotencyMiddleware, createTask);
 
 /**
  * @swagger
