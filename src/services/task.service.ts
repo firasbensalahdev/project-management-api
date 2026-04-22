@@ -5,6 +5,7 @@ import {
   UpdateTaskInput,
   TaskQueryInput,
 } from "../validators/task.validator";
+import { logActivity } from "../utils/activity";
 
 export const getTasksService = async (
   projectId: number,
@@ -74,13 +75,15 @@ export const createTaskService = async (
   projectId: number,
   userId: number,
   input: CreateTaskInput,
+  workspaceId: number,
+  userName: string,
 ) => {
   const project = await prisma.project.findUnique({
     where: { id: projectId, deletedAt: null },
   });
   if (!project) throw new AppError("Project not found", 404);
 
-  return prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       title: input.title,
       description: input.description,
@@ -97,6 +100,19 @@ export const createTaskService = async (
       },
     },
   });
+
+  // log activity
+  await logActivity({
+    workspaceId,
+    userId,
+    userName,
+    action: "task.created",
+    entityType: "task",
+    entityId: task.id,
+    metadata: { taskTitle: task.title, projectId },
+  });
+
+  return task;
 };
 
 export const updateTaskService = async (
