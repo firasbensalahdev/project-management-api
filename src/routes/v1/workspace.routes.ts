@@ -7,6 +7,7 @@ import {
   deleteWorkspace,
   inviteMember,
   removeMember,
+  getWorkspaceActivity,
 } from "../../controllers/workspace.controller";
 import { authMiddleware } from "../../middleware/auth.middleware";
 import { requirePermission } from "../../middleware/workspace.middleware";
@@ -287,6 +288,42 @@ router.delete(
   authMiddleware,
   requirePermission("remove_member"),
   removeMember,
+);
+
+/**
+ * @swagger
+ * /workspaces/{id}/activity:
+ *   get:
+ *     summary: Get workspace activity log
+ *     tags: [Workspaces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Activity log
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ActivityLog'
+ */
+router.get(
+  "/:id/activity",
+  authMiddleware,
+  requirePermission("view_activity"),
+  getWorkspaceActivity,
 );
 
 export default router;

@@ -8,6 +8,7 @@ import {
   deleteWorkspaceService,
   inviteMemberService,
   removeMemberService,
+  getWorkspaceActivityService,
 } from "../services/workspace.service";
 import {
   createWorkspaceSchema,
@@ -15,6 +16,7 @@ import {
   inviteMemberSchema,
 } from "../validators/workspace.validator";
 import { AppError } from "../utils/AppError";
+import { prisma } from "../config/prisma";
 
 export const createWorkspace = async (
   req: AuthRequest,
@@ -105,9 +107,17 @@ export const inviteMember = async (
     if (!parsed.success) {
       throw new AppError(parsed.error.message, 400);
     }
+
+    // get inviter details
+    const inviter = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { id: true, name: true },
+    });
+
     const member = await inviteMemberService(
       Number(req.params.id),
       parsed.data,
+      inviter!,
     );
     res.status(201).json({ success: true, data: member });
   } catch (error) {
@@ -127,6 +137,19 @@ export const removeMember = async (
       req.userId!,
     );
     res.json({ success: true, message: "Member removed successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWorkspaceActivity = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const activity = await getWorkspaceActivityService(Number(req.params.id));
+    res.json({ success: true, data: activity });
   } catch (error) {
     next(error);
   }
