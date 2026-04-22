@@ -5,6 +5,8 @@ import {
   UpdateWorkspaceInput,
   InviteMemberInput,
 } from "../validators/workspace.validator";
+import { emailQueue } from "../queues/email.queue";
+import { logActivity } from "../utils/activity";
 
 export const createWorkspaceService = async (
   userId: number,
@@ -115,40 +117,53 @@ export const deleteWorkspaceService = async (workspaceId: number) => {
 export const inviteMemberService = async (
   workspaceId: number,
   input: InviteMemberInput,
+  inviter: { id: number; name: string },
 ) => {
-  // find user by email
   const user = await prisma.user.findUnique({
     where: { email: input.email },
   });
   if (!user) throw new AppError("User not found", 404);
 
-  // check if already a member
   const existing = await prisma.workspaceMember.findUnique({
-    where: {
-      workspaceId_userId: {
-        workspaceId,
-        userId: user.id,
-      },
-    },
+    where: { workspaceId_userId: { workspaceId, userId: user.id } },
   });
   if (existing) throw new AppError("User is already a member", 409);
 
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { name: true },
+  });
+
   const member = await prisma.workspaceMember.create({
-    data: {
-      workspaceId,
-      userId: user.id,
-      role: input.role,
-    },
+    data: { workspaceId, userId: user.id, role: input.role },
     include: {
       user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
-        },
+        select: { id: true, name: true, email: true, avatarUrl: true },
       },
     },
+  });
+
+  // queue email job — non-blocking
+  await emailQueue.add("workspace.invite", {
+    type: "workspace.invite",
+    data: {
+      inviteeEmail: user.email,
+      inviteeName: user.name,
+      workspaceName: workspace?.name || "",
+      inviterName: inviter.name,
+      role: input.role,
+    },
+  });
+
+  // log activity — non-blocking
+  await logActivity({
+    workspaceId,
+    userId: inviter.id,
+    userName: inviter.name,
+    action: "member.invited",
+    entityType: "member",
+    entityId: user.id,
+    metadata: { inviteeEmail: user.email, role: input.role },
   });
 
   return member;
@@ -187,4 +202,13 @@ export const removeMemberService = async (
       },
     },
   });
+};
+
+export const getWorkspaceActivityService = async (workspaceId: number) => {
+  const { ActivityLog } = await import("../models/activityLog.model");
+
+  return ActivityLog.find({ workspaceId })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
 };
