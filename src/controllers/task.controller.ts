@@ -18,6 +18,7 @@ import {
   taskQuerySchema,
 } from "../validators/task.validator";
 import { AppError } from "../utils/AppError";
+import { prisma } from "../config/prisma";
 
 export const getTasks = async (
   req: AuthRequest,
@@ -62,10 +63,25 @@ export const createTask = async (
     if (!parsed.success) {
       throw new AppError(parsed.error.message, 400);
     }
+
+    // get user details for activity log
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { name: true },
+    });
+
+    // get workspaceId from project
+    const project = await prisma.project.findUnique({
+      where: { id: Number(req.params.projectId) },
+      select: { workspaceId: true },
+    });
+
     const task = await createTaskService(
       Number(req.params.projectId),
       req.userId!,
       parsed.data,
+      project?.workspaceId || 0,
+      user?.name || "",
     );
     res.status(201).json({ success: true, data: task });
   } catch (error) {
