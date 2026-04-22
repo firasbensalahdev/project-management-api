@@ -17,6 +17,8 @@ import workspaceRoutes from "./routes/v1/workspace.routes";
 import projectRoutes from "./routes/v1/project.routes";
 import taskRoutes from "./routes/v1/task.routes";
 import commentRoutes from "./routes/v1/comment.routes";
+import { startEmailWorker } from "./workers/email.worker";
+import { startActivityWorker } from "./workers/activity.worker";
 
 const app = express();
 
@@ -65,6 +67,9 @@ const start = async () => {
 
     await connectMongo();
     await redis.ping();
+
+    startEmailWorker();
+    startActivityWorker();
 
     app.listen(env.PORT, () => {
       logger.info(`Server running on http://localhost:${env.PORT}`);
