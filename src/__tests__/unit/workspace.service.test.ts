@@ -1,6 +1,5 @@
 import {
   createWorkspaceService,
-  getMyWorkspacesService,
   updateWorkspaceService,
   deleteWorkspaceService,
   inviteMemberService,
@@ -28,6 +27,16 @@ jest.mock("../../config/prisma", () => ({
       findUnique: jest.fn(),
     },
   },
+}));
+
+jest.mock("../../queues/email.queue", () => ({
+  emailQueue: {
+    add: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock("../../utils/activity", () => ({
+  logActivity: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockWorkspace = prisma.workspace as jest.Mocked<typeof prisma.workspace>;
@@ -118,8 +127,13 @@ describe("inviteMemberService", () => {
     mockUser.findUnique.mockResolvedValue({
       id: 2,
       email: "user@test.com",
+      name: "User",
     } as any);
     mockMember.findUnique.mockResolvedValue(null);
+    mockWorkspace.findUnique.mockResolvedValue({
+      id: 1,
+      name: "Test Workspace",
+    } as any);
     mockMember.create.mockResolvedValue({
       id: 1,
       workspaceId: 1,
@@ -128,10 +142,11 @@ describe("inviteMemberService", () => {
       user: { id: 2, name: "User", email: "user@test.com", avatarUrl: null },
     } as any);
 
-    const result = await inviteMemberService(1, {
-      email: "user@test.com",
-      role: "member",
-    });
+    const result = await inviteMemberService(
+      1,
+      { email: "user@test.com", role: "member" },
+      { id: 1, name: "Owner" },
+    );
 
     expect(result.role).toBe("member");
     expect(mockMember.create).toHaveBeenCalled();
@@ -141,16 +156,24 @@ describe("inviteMemberService", () => {
     mockUser.findUnique.mockResolvedValue(null);
 
     await expect(
-      inviteMemberService(1, { email: "nobody@test.com", role: "member" }),
+      inviteMemberService(
+        1,
+        { email: "nobody@test.com", role: "member" },
+        { id: 1, name: "Owner" },
+      ),
     ).rejects.toThrow(new AppError("User not found", 404));
   });
 
   it("should throw 409 if user already a member", async () => {
-    mockUser.findUnique.mockResolvedValue({ id: 2 } as any);
+    mockUser.findUnique.mockResolvedValue({ id: 2, name: "User" } as any);
     mockMember.findUnique.mockResolvedValue({ id: 1 } as any);
 
     await expect(
-      inviteMemberService(1, { email: "user@test.com", role: "member" }),
+      inviteMemberService(
+        1,
+        { email: "user@test.com", role: "member" },
+        { id: 1, name: "Owner" },
+      ),
     ).rejects.toThrow(new AppError("User is already a member", 409));
   });
 });

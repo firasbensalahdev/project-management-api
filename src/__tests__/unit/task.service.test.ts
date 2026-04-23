@@ -24,6 +24,10 @@ jest.mock("../../config/prisma", () => ({
   },
 }));
 
+jest.mock("../../utils/activity", () => ({
+  logActivity: jest.fn().mockResolvedValue(undefined),
+}));
+
 const mockTask = prisma.task as jest.Mocked<typeof prisma.task>;
 const mockProject = prisma.project as jest.Mocked<typeof prisma.project>;
 
@@ -50,7 +54,13 @@ describe("createTaskService", () => {
     mockProject.findUnique.mockResolvedValue({ id: 1 } as any);
     mockTask.create.mockResolvedValue(mockTaskData as any);
 
-    const result = await createTaskService(1, 1, { title: "Test Task" });
+    const result = await createTaskService(
+      1,
+      1,
+      { title: "Test Task" },
+      1,
+      "Test User",
+    );
 
     expect(result.title).toBe("Test Task");
     expect(mockTask.create).toHaveBeenCalledWith(
@@ -67,9 +77,9 @@ describe("createTaskService", () => {
   it("should throw 404 if project not found", async () => {
     mockProject.findUnique.mockResolvedValue(null);
 
-    await expect(createTaskService(99, 1, { title: "Test" })).rejects.toThrow(
-      new AppError("Project not found", 404),
-    );
+    await expect(
+      createTaskService(99, 1, { title: "Test" }, 1, "Test User"),
+    ).rejects.toThrow(new AppError("Project not found", 404));
   });
 });
 
@@ -180,7 +190,7 @@ describe("updateTaskStatusService", () => {
       status: "in_progress",
     } as any);
 
-    const result = await updateTaskStatusService(1, "in_progress");
+    await updateTaskStatusService(1, "in_progress");
 
     expect(mockTask.update).toHaveBeenCalledWith({
       where: { id: 1 },
