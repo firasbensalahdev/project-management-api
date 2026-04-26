@@ -52,6 +52,13 @@ export const startActivityWorker = () => {
       { jobId: job?.id, error: error.message },
       "Activity job failed",
     );
+
+    if (job && job.attemptsMade >= 2) {
+      logger.error(
+        { jobId: job.id, data: job.data },
+        "Activity job moved to dead letter queue after max retries",
+      );
+    }
   });
 
   logger.info("Activity worker started");
