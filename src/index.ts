@@ -19,8 +19,11 @@ import taskRoutes from "./routes/v1/task.routes";
 import commentRoutes from "./routes/v1/comment.routes";
 import { startEmailWorker } from "./workers/email.worker";
 import { startActivityWorker } from "./workers/activity.worker";
+import { createServer } from "http";
+import { initializeSocket } from "./sockets";
 
 const app = express();
+const httpServer = createServer(app);
 
 // security middleware
 app.use(helmet());
@@ -67,6 +70,8 @@ const start = async () => {
 
     await connectMongo();
     await redis.ping();
+
+    initializeSocket(httpServer);
 
     startEmailWorker();
     startActivityWorker();
