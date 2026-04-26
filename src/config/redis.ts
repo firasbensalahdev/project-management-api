@@ -30,3 +30,6 @@ const createRedisClient = (name: string): Redis => {
 export const redis = createRedisClient("client");
 
 export const bullRedis = createRedisClient("bullmq");
+
+export const socketPubRedis = createRedisClient("socket-pub");
+export const socketSubRedis = createRedisClient("socket-sub");
