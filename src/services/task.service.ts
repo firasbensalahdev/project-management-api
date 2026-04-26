@@ -6,6 +6,7 @@ import {
   TaskQueryInput,
 } from "../validators/task.validator";
 import { logActivity } from "../utils/activity";
+import { emitToWorkspace } from "../sockets";
 
 export const getTasksService = async (
   projectId: number,
@@ -112,6 +113,13 @@ export const createTaskService = async (
     metadata: { taskTitle: task.title, projectId },
   });
 
+  // emit real-time event
+  emitToWorkspace(workspaceId, "task:created", {
+    task,
+    projectId,
+    workspaceId,
+  });
+
   return task;
 };
 
@@ -123,12 +131,11 @@ export const updateTaskService = async (
 ) => {
   const task = await getTaskByIdService(taskId);
 
-  // members can only edit their own tasks
   if (userRole === "member" && task.createdById !== userId) {
     throw new AppError("You can only edit your own tasks", 403);
   }
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id: taskId },
     data: input,
     include: {
@@ -140,6 +147,18 @@ export const updateTaskService = async (
       },
     },
   });
+
+  // get workspaceId for socket emit
+  const project = await prisma.project.findUnique({
+    where: { id: task.projectId },
+    select: { workspaceId: true },
+  });
+
+  if (project) {
+    emitToWorkspace(project.workspaceId, "task:updated", { task: updated });
+  }
+
+  return updated;
 };
 
 export const deleteTaskService = async (
@@ -164,9 +183,9 @@ export const assignTaskService = async (
   taskId: number,
   assignedToId: number | null,
 ) => {
-  await getTaskByIdService(taskId);
+  const task = await getTaskByIdService(taskId);
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id: taskId },
     data: { assignedToId },
     include: {
@@ -175,18 +194,46 @@ export const assignTaskService = async (
       },
     },
   });
+
+  const project = await prisma.project.findUnique({
+    where: { id: task.projectId },
+    select: { workspaceId: true },
+  });
+
+  if (project) {
+    emitToWorkspace(project.workspaceId, "task:assigned", {
+      taskId,
+      assignedTo: updated.assignedTo,
+    });
+  }
+
+  return updated;
 };
 
 export const updateTaskStatusService = async (
   taskId: number,
   status: string,
 ) => {
-  await getTaskByIdService(taskId);
+  const task = await getTaskByIdService(taskId);
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id: taskId },
     data: { status },
   });
+
+  const project = await prisma.project.findUnique({
+    where: { id: task.projectId },
+    select: { workspaceId: true },
+  });
+
+  if (project) {
+    emitToWorkspace(project.workspaceId, "task:status_changed", {
+      taskId,
+      status,
+    });
+  }
+
+  return updated;
 };
 
 export const uploadTaskAttachmentService = async (
