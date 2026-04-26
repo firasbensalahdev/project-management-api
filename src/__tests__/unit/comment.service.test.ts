@@ -20,6 +20,10 @@ jest.mock("../../config/prisma", () => ({
   },
 }));
 
+jest.mock("../../sockets", () => ({
+  emitToWorkspace: jest.fn(),
+}));
+
 const mockComment = prisma.comment as jest.Mocked<typeof prisma.comment>;
 const mockTask = prisma.task as jest.Mocked<typeof prisma.task>;
 
@@ -33,11 +37,17 @@ const mockCommentData = {
   user: { id: 1, name: "User", email: "user@test.com", avatarUrl: null },
 };
 
+const mockTaskData = {
+  id: 1,
+  deletedAt: null,
+  project: { workspaceId: 1 },
+};
+
 describe("getCommentsService", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("should return comments for a task", async () => {
-    mockTask.findUnique.mockResolvedValue({ id: 1 } as any);
+    mockTask.findUnique.mockResolvedValue(mockTaskData as any);
     mockComment.findMany.mockResolvedValue([mockCommentData] as any);
 
     const result = await getCommentsService(1);
@@ -59,7 +69,7 @@ describe("createCommentService", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("should create a comment successfully", async () => {
-    mockTask.findUnique.mockResolvedValue({ id: 1 } as any);
+    mockTask.findUnique.mockResolvedValue(mockTaskData as any);
     mockComment.create.mockResolvedValue(mockCommentData as any);
 
     const result = await createCommentService(1, 1, {

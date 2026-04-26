@@ -7,6 +7,7 @@ import {
 } from "../validators/workspace.validator";
 import { emailQueue } from "../queues/email.queue";
 import { logActivity } from "../utils/activity";
+import { emitToWorkspace } from "../sockets";
 
 export const createWorkspaceService = async (
   userId: number,
@@ -164,6 +165,12 @@ export const inviteMemberService = async (
     entityType: "member",
     entityId: user.id,
     metadata: { inviteeEmail: user.email, role: input.role },
+  });
+
+  // emit real-time event
+  emitToWorkspace(workspaceId, "member:joined", {
+    user: member.user,
+    role: input.role,
   });
 
   return member;

@@ -4,6 +4,7 @@ import {
   CreateCommentInput,
   UpdateCommentInput,
 } from "../validators/comment.validator";
+import { emitToWorkspace } from "../sockets";
 
 export const getCommentsService = async (taskId: number) => {
   const task = await prisma.task.findUnique({
@@ -29,21 +30,28 @@ export const createCommentService = async (
 ) => {
   const task = await prisma.task.findUnique({
     where: { id: taskId, deletedAt: null },
+    include: {
+      project: { select: { workspaceId: true } },
+    },
   });
   if (!task) throw new AppError("Task not found", 404);
 
-  return prisma.comment.create({
-    data: {
-      content: input.content,
-      taskId,
-      userId,
-    },
+  const comment = await prisma.comment.create({
+    data: { content: input.content, taskId, userId },
     include: {
       user: {
         select: { id: true, name: true, email: true, avatarUrl: true },
       },
     },
   });
+
+  // emit real-time event
+  emitToWorkspace(task.project.workspaceId, "comment:added", {
+    comment,
+    taskId,
+  });
+
+  return comment;
 };
 
 export const deleteCommentService = async (

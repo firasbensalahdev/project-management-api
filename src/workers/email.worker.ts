@@ -88,6 +88,13 @@ export const startEmailWorker = () => {
       { jobId: job?.id, type: job?.data.type, error: error.message },
       "Email job failed",
     );
+
+    if (job && job.attemptsMade >= 3) {
+      logger.error(
+        { jobId: job.id, data: job.data },
+        "Email job moved to dead letter queue after max retries",
+      );
+    }
   });
 
   logger.info("Email worker started");
